@@ -34,8 +34,13 @@ function new-exOrgnr {
     $results = @()  # Array to hold results
 
     for ($i = 0; $i -lt $count; $i++) {
-        $randomNumber = New-8DigitNumber
-        $checkDigit = Generate-NorwegianOrgUnitCheckDigit -orgUnitNumber $randomNumber
+
+        # Trekker et nytt tall helt til vi får et gyldig kontrollsiffer (ikke 10)
+        do {
+            $randomNumber = New-8DigitNumber
+            $checkDigit = new-NorwegianOrgUnitCheckDigit -orgUnitNumber $randomNumber
+        } while ($checkDigit -eq 10)
+
         $orgnr = "$randomNumber$checkDigit"
         $uri = ($endPoint + $orgnr)
 
@@ -45,9 +50,9 @@ function new-exOrgnr {
         } catch {
             # Handle expected responses as informational rather than errors
             switch ($_.Exception.Response.StatusCode.Value__) {
-                400 { Write-Error 'Error 400: Endpoint not found.' }
-                404 { Write-Host "Info: $orgnr not found in the brreg, can be used." -ForegroundColor Yellow }
-                410 { Write-Host "Info: $orgnr has been deleted from the brreg, can be used." -ForegroundColor DarkYellow }
+                400 { Write-Error "Error 400: Ugyldig format på orgnr ($orgnr)." }
+                404 { Write-Host "Info: $orgnr finnes ikke i brreg, kan brukes." -ForegroundColor Yellow }
+                410 { Write-Host "Info: $orgnr er slettet fra brreg, kan brukes." -ForegroundColor DarkYellow }
                 500 { Write-Error 'Error 500: Server error.' }
                 default { Write-Error "An unexpected error occurred: $_" }
             }
@@ -57,6 +62,6 @@ function new-exOrgnr {
     return $results
 }
 
-# Example usage
+# Eksempel på bruk:
 # $results = new-exOrgnr -count 5
 # Write-Output $results
